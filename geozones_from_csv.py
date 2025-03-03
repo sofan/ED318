@@ -178,7 +178,7 @@ if uploaded_file is not None:
 
         with open(geojson_path, 'rb') as f:
             st.download_button(
-                label="Download JSON file",
+                label="Download ED318 GeoJSON file",
                 data=f,
                 file_name=geojson_path,
                 mime="application/json"
