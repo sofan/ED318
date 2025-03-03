@@ -127,8 +127,8 @@ provider = st.text_input("Provider", "Luftfartsverket, 601 79 Norrköping, utm@l
 issued = st.date_input("Issued", None, key="issued")
 validFrom = st.date_input("Valid From", None, key="valid_from")
 validTo = st.date_input("Valid To", None, key="valid_to")
-description = st.text_input("Description", "")
-technicalLimitation = st.text_input("")
+description = st.text_input("Description", "", key="description")
+technicalLimitation = st.text_input("Technical Limitation", "", key="limitations")
 useForDronechart = st.checkbox("Use for Dronechart", False)
 
 # File uploader
