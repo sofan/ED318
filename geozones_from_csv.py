@@ -124,11 +124,11 @@ def create_geojson_feature(row):
 st.title('Excel to ED318 GeoJSON Converter')
 
 provider = st.text_input("Provider", "Luftfartsverket, 601 79 Norrköping, utm@lfv.se")
-issued = st.date_input("Issued", datetime(2025, 1, 30), key="issued")
-validFrom = st.date_input("Valid From", datetime(2025, 3, 1), key="valid_from")
+issued = st.date_input("Issued", None, key="issued")
+validFrom = st.date_input("Valid From", None, key="valid_from")
 validTo = st.date_input("Valid To", None, key="valid_to")
 description = st.text_input("Description", "")
-technicalLimitation = st.text_input("Technical Limitation", "Coordinates validated through LFV eCharts")
+technicalLimitation = st.text_input("")
 useForDronechart = st.checkbox("Use for Dronechart", False)
 
 # File uploader
