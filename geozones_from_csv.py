@@ -27,19 +27,26 @@ def create_language_list(row, en_col, se_col, name_attr="text"):
 
 # Funktion för att skapa geojson-funktioner
 def create_geojson_feature(row):
-    shapely_obj = loads(row['geometry'])
-    geometry_type = shapely_obj.geom_type
+    geometry = row.get('geometry')
+    if isinstance(geometry, str):  # Om geometrin är i WKT-format
+        shapely_obj = loads(geometry)
+        geometry_type = shapely_obj.geom_type
+        geom = {
+            "type": geometry_type,
+            "coordinates": [],
+            "layer": {}
+        }
 
-    geom = {"type": geometry_type, "coordinates": [], "layer": {}}
-
-    if geometry_type == 'Point':
-        geom["coordinates"] = list(shapely_obj.coords)[0]
-        geom["extent"] = {"subType": "Circle", "radius": row['radius']}
-    elif geometry_type == 'Polygon':
-        oriented_polygon = orient(shapely_obj)
-        geom["coordinates"] = [list(oriented_polygon.exterior.coords)]
-    else:
-        raise ValueError(f"Okänd geometrityp: {geometry_type}")
+        if geometry_type == 'Point':
+            geom["coordinates"] = list(shapely_obj.coords)[0]
+            geom["extent"] = {"subType": "Circle", "radius": row['radius']}
+        elif geometry_type == 'Polygon':
+            oriented_polygon = orient(shapely_obj)
+            geom["coordinates"] = [list(oriented_polygon.exterior.coords)]
+        else:
+            raise ValueError(f"Okänd geometrityp: {geometry_type}")
+    else:  # Om geometrin redan är i JSON-format
+        geom = geometry
 
     geom["layer"] = {
         "upper": row.upper,
@@ -120,12 +127,37 @@ def create_geojson_feature(row):
 
     return feature
 
+# Funktion för att hämta WKT från en WFS-tjänst
+def get_wkt_from_wfs(ids):
+    wfs_url = "https://daim.lfv.se/geoserver/wfs"
+    layers = ["RSTA", "DNGA", "CTR", "ATZ", "TIZ"]
+    id_to_geometry = {}
+    for layer in layers:
+        filter_query = '<Or>' + ''.join([f"<PropertyIsEqualTo><PropertyName>NAMEOFAREA</PropertyName><Literal>{id}</Literal></PropertyIsEqualTo>" for id in ids]) + '</Or>'
+        params = {
+            "service": "WFS",
+            "version": "1.0.0",
+            "request": "GetFeature",
+            "typeName": layer,
+            "outputFormat": "application/json",
+            "filter": f"<Filter>{filter_query}</Filter>"
+        }
+        response = requests.get(wfs_url, params=params)
+        geojson = response.json()
+        for feature in geojson['features']:
+            id_to_geometry[feature['properties']['NAMEOFAREA']] = feature['geometry']
+        # Ta bort ID:n som redan hittats från listan
+        ids = [id for id in ids if id not in id_to_geometry]
+        if not ids:  # Om alla ID:n har hittats, bryt loopen
+            break
+    return id_to_geometry
+
 # Streamlit UI
 st.title('Excel to ED318 GeoJSON Converter')
 
 provider = st.text_input("Provider", "Luftfartsverket, 601 79 Norrköping, utm@lfv.se")
-issued = st.date_input("Issued", None, key="issued")
-validFrom = st.date_input("Valid From", None, key="valid_from")
+issued = st.date_input("Issued", datetime(2025, 1, 30), key="issued")
+validFrom = st.date_input("Valid From", datetime(2025, 3, 1), key="valid_from")
 validTo = st.date_input("Valid To", None, key="valid_to")
 description = st.text_input("Description", "", key="description")
 technicalLimitation = st.text_input("Technical Limitation", "", key="limitations")
@@ -143,6 +175,17 @@ if uploaded_file is not None:
 
         df = pd.read_excel(uploaded_file)
         df['reason'] = df['reason'].fillna('')
+
+        # Hämta alla ID:n som saknar geometri
+        missing_geometry_ids = df[df['geometry'].isna()]['identifier'].tolist()
+
+        if missing_geometry_ids:
+            # Hämta WKT från WFS för alla saknade geometriska data
+            id_to_geometry = get_wkt_from_wfs(missing_geometry_ids)
+            # Uppdatera DataFrame med hämtad geometri
+            for index, row in df.iterrows():
+                if pd.isna(row['geometry']) and row['identifier'] in id_to_geometry:
+                    df.at[index, 'geometry'] = id_to_geometry[row['identifier']]
 
         df.dropna(subset=['identifier', 'geometry'], inplace=True)
         df['name'] = df.apply(lambda row: create_language_list(row, "name_en", "name_se"), axis=1)
