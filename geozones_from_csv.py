@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from shapely.wkt import loads
 from shapely.geometry.polygon import orient
+import requests
 
 # Funktion för att formatera datum om det finns ett värde
 def format_date(date_str, default_time="00:00:00"):
