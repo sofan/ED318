@@ -190,7 +190,7 @@ if uploaded_file is not None:
 
         df.dropna(subset=['identifier', 'geometry'], inplace=True)
         df['name'] = df.apply(lambda row: create_language_list(row, "name_en", "name_se"), axis=1)
-        df['authority_name'] = df.apply(lambda row: create_language_list(row, "authorityName_en", "authorityName_se", name_attr="name"), axis=1)
+        df['authority_name'] = df.apply(lambda row: create_language_list(row, "authorityName_en", "authorityName_se", name_attr="text"), axis=1)
         df['restrictionConditions'] = df["restrictionConditions_en"]
         df['otherReasonInfo'] = df.apply(lambda row: create_language_list(row, "otherReasonInfo_en", "otherReasonInfo_se", name_attr="text"), axis=1)
         df['message'] = df.apply(lambda row: create_language_list(row, "message_en", "message_se", name_attr="text"), axis=1)
