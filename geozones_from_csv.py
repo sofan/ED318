@@ -26,6 +26,9 @@ def create_language_list(row, en_col, se_col, name_attr="text"):
         [{name_attr: row[se_col], "lang": "se-SE"}] if pd.notna(row[se_col]) else None
     )
 
+
+
+
 # Funktion för att skapa geojson-funktioner
 def create_geojson_feature(row):
     geometry = row.get('geometry')
@@ -69,9 +72,33 @@ def create_geojson_feature(row):
     if pd.notna(contact_name):
         auth['contactName'] = [{'text': contact_name, 'lang': 'se-SE'}]
 
-    service = row.get('service')
+    service = row.get('authority_service')
     if pd.notna(service):
         auth['service'] = [{'text': service, 'lang': 'se-SE'}]
+
+    auth_list = [auth]
+
+    # authority 2 (om den finns)
+
+    if row["authority2_name"] is not None:
+      auth2 = {'name': row['authority2_name']}
+      auth2_cols = ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
+
+      for col in auth2_cols:
+          val = row[f'authority2_{col}']
+          if not isinstance(val, list) and pd.notna(val):
+              auth2[col] = val
+
+      contact2_name = row.get('authority2_contactName')
+      if pd.notna(contact2_name):
+          auth2['contactName'] = [{'text': contact2_name, 'lang': 'se-SE'}]
+
+      service2 = row.get('authority2_service')
+      if pd.notna(service2):
+          auth2['service'] = [{'text': service2, 'lang': 'se-SE'}]
+
+      auth_list.append(auth2)
+
 
     times = None
 
@@ -100,7 +127,7 @@ def create_geojson_feature(row):
             'variant': row['variant'],
             'reason': row['reason'],
             'type': row['type'],
-            'zoneAuthority': [auth],
+            'zoneAuthority': auth_list,
         }
     }
 
@@ -191,7 +218,8 @@ if uploaded_file is not None:
         df.dropna(subset=['identifier', 'geometry'], inplace=True)
         df['name'] = df.apply(lambda row: create_language_list(row, "name_en", "name_se"), axis=1)
         df['authority_name'] = df.apply(lambda row: create_language_list(row, "authorityName_en", "authorityName_se", name_attr="text"), axis=1)
-        df['restrictionConditions'] = df["restrictionConditions_en"]
+        df['authority2_name'] = df.apply(lambda row: create_language_list(row, "authority2Name_en", "authority2Name_se", name_attr="text"), axis=1)
+        df['restrictionConditions'] = df["restrictionConditions"]
         df['otherReasonInfo'] = df.apply(lambda row: create_language_list(row, "otherReasonInfo_en", "otherReasonInfo_se", name_attr="text"), axis=1)
         df['message'] = df.apply(lambda row: create_language_list(row, "message_en", "message_se", name_attr="text"), axis=1)
         df['reason'] = df['reason'].apply(lambda x: [reason.strip() for reason in x.split(',')])
