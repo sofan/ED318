@@ -18,6 +18,11 @@ def format_date(date_str, default_time="00:00:00"):
 
 # Funktion för att skapa språklista
 def create_language_list(row, en_col, se_col, name_attr="text"):
+
+     # kolla att båda kolumnerna finns
+    if en_col not in row.index or se_col not in row.index:
+        return None
+
     return [
         {name_attr: row[en_col], "lang": "en-GB"},
         {name_attr: row[se_col], "lang": "se-SE"}
