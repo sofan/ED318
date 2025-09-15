@@ -54,7 +54,7 @@ def create_geojson_feature(row):
         "upperReference": row.upperRef,
         "lower": row.lower,
         "lowerReference": row.lowerRef,
-        "uom": row.uom,
+        "uom": row.uom.lower(),
     }
 
     auth = {'name': row['authority_name']}
@@ -107,9 +107,9 @@ def create_geojson_feature(row):
     if useForDronechart:
         feature['properties'].update({
             "upper": row['upper'],
-            "upperUom": f"{row['uom']} {row['upperRef']}",
+            "upperUom": f"{row['uom'].lower()} {row['upperRef']}",
             "lower": row['lower'],
-            "lowerUom": f"{row['uom']} {row['lowerRef']}",
+            "lowerUom": f"{row['uom'].lower()} {row['lowerRef']}",
         })
 
     if row['restrictionConditions'] is not None:
