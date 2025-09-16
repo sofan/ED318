@@ -69,11 +69,11 @@ def create_geojson_feature(row):
     auth_cols = ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
 
     for col in auth_cols:
-        val = row[f'authority_{col}']
+        val = row[f'authority1_{col}']
         if not isinstance(val, list) and pd.notna(val):
             auth[col] = val
 
-    contact_name = row.get('authority_contactName')
+    contact_name = row.get('authority1_contactName')
     if pd.notna(contact_name):
         auth['contactName'] = [{'text': contact_name, 'lang': 'se-SE'}]
 
@@ -222,7 +222,7 @@ if uploaded_file is not None:
 
         df.dropna(subset=['identifier', 'geometry'], inplace=True)
         df['name'] = df.apply(lambda row: create_language_list(row, "name_en", "name_se"), axis=1)
-        df['authority_name'] = df.apply(lambda row: create_language_list(row, "authorityName_en", "authorityName_se", name_attr="text"), axis=1)
+        df['authority_name'] = df.apply(lambda row: create_language_list(row, "authority1Name_en", "authority1Name_se", name_attr="text"), axis=1)
         df['authority2_name'] = df.apply(lambda row: create_language_list(row, "authority2Name_en", "authority2Name_se", name_attr="text"), axis=1)
         df['restrictionConditions'] = df["restrictionConditions"]
         df['otherReasonInfo'] = df.apply(lambda row: create_language_list(row, "otherReasonInfo_en", "otherReasonInfo_se", name_attr="text"), axis=1)
