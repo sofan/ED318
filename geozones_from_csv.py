@@ -1,10 +1,15 @@
 import streamlit as st
 import pandas as pd
 import json
-from datetime import datetime
+from datetime import date, datetime
 from shapely.wkt import loads
 from shapely.geometry.polygon import orient
 import requests
+import logging
+
+# Konfigurera logging för att skriva ut felmeddelanden
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 # Funktion för att formatera datum om det finns ett värde
 def format_date(date_str, default_time="00:00:00"):
@@ -64,7 +69,8 @@ def create_geojson_feature(row):
             geom["coordinates"] = list(shapely_obj.coords)[0]
             geom["extent"] = {"subType": "Circle", "radius": row['radius']}
         elif geometry_type == 'Polygon':
-            oriented_polygon = orient(shapely_obj)
+            # Orientera polygonen enligt right-hand rule
+            oriented_polygon = orient(shapely_obj, sign=1.0)
             geom["coordinates"] = [list(oriented_polygon.exterior.coords)]
         else:
             raise ValueError(f"Okänd geometrityp: {geometry_type}")
@@ -200,77 +206,106 @@ def get_wkt_from_wfs(ids):
     return id_to_geometry
 
 # Streamlit UI
-st.title('Excel to ED318 GeoJSON Converter')
+st.title('Excel till ED318 GeoJSON')
 
-provider = st.text_input("Provider", "Luftfartsverket, 601 79 Norrköping, utm@lfv.se")
-issued = st.date_input("Issued", datetime(2025, 1, 30), key="issued")
-validFrom = st.date_input("Valid From", datetime(2025, 3, 1), key="valid_from")
+provider = st.text_input("Provider *", "Transportstyrelsen")
+issued = st.date_input("Issued *", date.today(), key="issued")
+validFrom = st.date_input("Valid From *", None, key="valid_from")
 validTo = st.date_input("Valid To", None, key="valid_to")
 description = st.text_input("Description", "", key="description")
 technicalLimitation = st.text_input("Technical Limitation", "", key="limitations")
-useForDronechart = st.checkbox("Use for Dronechart", False)
+useForDronechart = st.checkbox("Skapa fil till Drönarkartan", False)
 
 # File uploader
-uploaded_file = st.file_uploader("Choose an Excel file", type=["xlsx"])
+uploaded_file = st.file_uploader("Välj en Excel fil", type=["xlsx"])
 
 if uploaded_file is not None:
-    if st.button('Convert'):
+    
+    if st.button('Generera fil'):
 
-        issued_datetime = issued.strftime("%Y-%m-%dT%H:%M:%SZ")
-        valid_from_datetime = validFrom.strftime("%Y-%m-%dT%H:%M:%SZ")
-        valid_to_datetime = validTo.strftime("%Y-%m-%dT%H:%M:%SZ") if validTo else ""
+         # Kontrollera att obligatoriska fält är ifyllda
+        if not provider.strip():
+            st.error("Fältet 'Provider' måste anges.")
+        elif not issued:
+            st.error("Fältet 'Issued' måste anges.")
+        elif not validFrom:
+            st.error("Fältet 'Valid From' måste anges.")
+        else:
+            try:
+                issued_datetime = issued.strftime("%Y-%m-%dT%H:%M:%SZ")
+                valid_from_datetime = validFrom.strftime("%Y-%m-%dT%H:%M:%SZ")
+                valid_to_datetime = validTo.strftime("%Y-%m-%dT%H:%M:%SZ") if validTo else ""
 
-        df = pd.read_excel(uploaded_file)
-        df['reason'] = df['reason'].fillna('')
+                # Försök läsa Excel-filen
+                df = pd.read_excel(uploaded_file)
+                df['reason'] = df['reason'].fillna('')
 
-        # Hämta alla ID:n som saknar geometri
-        missing_geometry_ids = df[df['geometry'].isna()]['identifier'].tolist()
+                # Hämta alla ID:n som saknar geometri
+                missing_geometry_ids = df[df['geometry'].isna()]['identifier'].tolist()
 
-        if missing_geometry_ids:
-            # Hämta WKT från WFS för alla saknade geometriska data
-            id_to_geometry = get_wkt_from_wfs(missing_geometry_ids)
-            # Uppdatera DataFrame med hämtad geometri
-            for index, row in df.iterrows():
-                if pd.isna(row['geometry']) and row['identifier'] in id_to_geometry:
-                    df.at[index, 'geometry'] = id_to_geometry[row['identifier']]
+                if missing_geometry_ids:
+                    # Hämta WKT från WFS för alla saknade geometriska data
+                    id_to_geometry = get_wkt_from_wfs(missing_geometry_ids)
+                    # Uppdatera DataFrame med hämtad geometri
+                    for index, row in df.iterrows():
+                        if pd.isna(row['geometry']) and row['identifier'] in id_to_geometry:
+                            df.at[index, 'geometry'] = id_to_geometry[row['identifier']]
 
-        df.dropna(subset=['identifier', 'geometry'], inplace=True)
-        df['name'] = df.apply(lambda row: create_language_list(row, "name_en", "name_se"), axis=1)
-        df['authority_name'] = df.apply(lambda row: create_language_list(row, "authority1Name_en", "authority1Name_se", name_attr="text"), axis=1)
-        df['authority2_name'] = df.apply(lambda row: create_language_list(row, "authority2Name_en", "authority2Name_se", name_attr="text"), axis=1)
-        df['restrictionConditions'] = df["restrictionConditions"]
-        df['otherReasonInfo'] = df.apply(lambda row: create_language_list(row, "otherReasonInfo_en", "otherReasonInfo_se", name_attr="text"), axis=1)
-        df['message'] = df.apply(lambda row: create_language_list(row, "message_en", "message_se", name_attr="text"), axis=1)
-        df['reason'] = df['reason'].apply(lambda x: [reason.strip() for reason in x.split(',')])
-        df['geojson_feature'] = df.apply(create_geojson_feature, axis=1)
+                df.dropna(subset=['identifier', 'geometry'], inplace=True)
+                df['name'] = df.apply(lambda row: create_language_list(row, "name_en", "name_se"), axis=1)
+                df['authority_name'] = df.apply(lambda row: create_language_list(row, "authority1Name_en", "authority1Name_se", name_attr="text"), axis=1)
+                df['authority2_name'] = df.apply(lambda row: create_language_list(row, "authority2Name_en", "authority2Name_se", name_attr="text"), axis=1)
+                df['restrictionConditions'] = df["restrictionConditions"]
+                df['otherReasonInfo'] = df.apply(lambda row: create_language_list(row, "otherReasonInfo_en", "otherReasonInfo_se", name_attr="text"), axis=1)
+                df['message'] = df.apply(lambda row: create_language_list(row, "message_en", "message_se", name_attr="text"), axis=1)
+                df['reason'] = df['reason'].apply(lambda x: [reason.strip() for reason in x.split(',')])
+                df['geojson_feature'] = df.apply(create_geojson_feature, axis=1)
 
-        geojson_collection = {
-            'type': 'FeatureCollection',
-            'title': 'Sample GeoZOnes',
-            'metadata': {
-                'provider': [{'lang': 'en-GB', 'text': provider}],
-                'issued': issued_datetime,
-                'validFrom': valid_from_datetime,
-                'technicalLimitations': [{'lang': 'en-GB', 'text': technicalLimitation}]
-            },
-            'features': list(df['geojson_feature'])
-        }
+                geojson_collection = {
+                    'type': 'FeatureCollection',
+                    'title': 'Sample GeoZOnes',
+                    'metadata': {
+                        'provider': [{'lang': 'en-GB', 'text': provider}],
+                        'issued': issued_datetime,
+                        'validFrom': valid_from_datetime                        
+                    },
+                    'features': list(df['geojson_feature'])
+                }
 
-        if valid_to_datetime != "":
-            geojson_collection['metadata']['validTo'] = valid_to_datetime
-        if description != "":
-            geojson_collection['metadata']['description'] = [{'lang': 'en-GB', 'text': description}]
+                if valid_to_datetime != "":
+                    geojson_collection['metadata']['validTo'] = valid_to_datetime
+                if description.strip() != "":
+                    geojson_collection['metadata']['description'] = [{'lang': 'en-GB', 'text': description}]
+                
+                if technicalLimitation.strip() != "":
+                    geojson_collection['metadata']['technicalLimitations'] = [{'lang': 'en-GB', 'text': technicalLimitation}]
 
-        geojson_path = 'zones_dronechart.json' if useForDronechart else 'uas_zones_ED318.json'
-        with open(geojson_path, 'w', encoding='utf-8') as geojson_file:
-            json.dump(geojson_collection, geojson_file, ensure_ascii=False, indent=4)
+                geojson_path = 'zones_dronechart.json' if useForDronechart else 'uas_zones_ED318.json'
+                download_label = 'Ladda ner fil till Drönarkartan' if useForDronechart else 'Ladda ner ED318 fil'
+                success_label = 'GeoJSON till Drönarkartan skapad' if useForDronechart else 'ED318 för nedladdning skapad'
+                with open(geojson_path, 'w', encoding='utf-8') as geojson_file:
+                    json.dump(geojson_collection, geojson_file, ensure_ascii=False, indent=4)
 
-        st.success(f"GeoJSON file saved as {geojson_path}")
+                st.success(f"{success_label}, {geojson_path}")
 
-        with open(geojson_path, 'rb') as f:
-            st.download_button(
-                label="Download ED318 GeoJSON file",
-                data=f,
-                file_name=geojson_path,
-                mime="application/json"
-            )
+                with open(geojson_path, 'rb') as f:
+                    st.download_button(
+                        label=download_label,
+                        data=f,
+                        file_name=geojson_path,
+                        mime="application/json"
+                    )
+
+
+            except KeyError as e:
+                st.error(f"Ett fel inträffade: {e} kunde inte hittas.")
+                logging.error(f"KeyError: {e} .")
+            except ValueError as e:
+                st.error(f"Felaktig data: {e}")
+                logging.error(f"ValueError: {e}")
+            except Exception as e:
+                st.error(f"Ett oväntat fel inträffade: {e}")
+                logging.error(f"Exception: {e}")
+
+
+
