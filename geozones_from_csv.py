@@ -16,6 +16,20 @@ def format_date(date_str, default_time="00:00:00"):
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     return ""  # Returnera tom sträng om datum är tomt
 
+
+def fix_datetime_string(dt_str):
+    if pd.isna(dt_str):
+        return None
+    # Ta bort extra sekunder så det blir giltigt ISO 8601
+    # Exempel: 2025-10-01T00:00:00:00Z -> 2025-10-01T00:00Z
+    fixed = dt_str
+    if ':' in dt_str:
+        parts = dt_str.split(':')
+        if len(parts) > 3:
+            # behåll bara de första två delarna i tid (HH:MM)
+            fixed = f"{parts[0]}:{parts[1]}Z"
+    return fixed
+
 # Funktion för att skapa språklista
 def create_language_list(row, en_col, se_col, name_attr="text"):
 
@@ -110,9 +124,9 @@ def create_geojson_feature(row):
     if pd.notna(row['startDateTime']) or pd.notna(row['endDateTime']) or pd.notna(row['schedule']):
         times = {}
         if pd.notna(row['startDateTime']):
-            times['startDateTime'] = row['startDateTime']
+            times['startDateTime'] = fix_datetime_string(row['startDateTime'])
         if pd.notna(row['endDateTime']):
-            times['endDateTime'] = row['endDateTime']
+            times['endDateTime'] = fix_datetime_string(row['endDateTime'])
         if pd.notna(row['schedule']):
             times['schedule'] = json.loads(row['schedule'])
 
