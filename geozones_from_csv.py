@@ -206,7 +206,8 @@ def get_wkt_from_wfs(ids):
     return id_to_geometry
 
 # Streamlit UI
-st.title('Excel till ED318 GeoJSON')
+st.set_page_config(page_title="ED318 JSON Schema Validator", layout="centered")
+st.title('🛰️ Excel till ED318 GeoJSON')
 
 provider = st.text_input("Provider *", "Transportstyrelsen")
 issued = st.date_input("Issued *", date.today(), key="issued")
