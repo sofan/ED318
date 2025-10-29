@@ -91,7 +91,7 @@ def create_geojson_feature(row):
     for col in auth_cols:
         val = row[f'authority1_{col}']
         if not isinstance(val, list) and pd.notna(val):
-            auth[col] = val
+            auth[col] = str(val)
 
     contact_name = row.get('authority1_contactName')
     if pd.notna(contact_name):
@@ -112,7 +112,7 @@ def create_geojson_feature(row):
       for col in auth2_cols:
           val = row[f'authority2_{col}']
           if not isinstance(val, list) and pd.notna(val):
-              auth2[col] = val
+              auth2[col] = str(val)
 
       contact2_name = row.get('authority2_contactName')
       if pd.notna(contact2_name):
