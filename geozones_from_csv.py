@@ -134,7 +134,7 @@ def create_geojson_feature(row):
         if pd.notna(row['endDateTime']):
             times['endDateTime'] = fix_datetime_string(row['endDateTime'])
         if pd.notna(row['schedule']):
-            times['schedule'] = json.loads(row['schedule'])
+            times['schedule'] = parse_schedule(row['schedule'])
 
     dataSource = {'creationDateTime': row['creationDateTime']}
     if pd.notna(row['updateDateTime']):
@@ -204,6 +204,24 @@ def get_wkt_from_wfs(ids):
         if not ids:  # Om alla ID:n har hittats, bryt loopen
             break
     return id_to_geometry
+
+# Funktion för att parsa schedule-fältet
+def parse_schedule(schedule_str):
+    """
+    Parse the schedule field to ensure it is a valid JSON structure.
+    If the input contains a "schedule": prefix, remove it before parsing.
+    """
+    try:
+        if isinstance(schedule_str, str):
+            # Remove "schedule": prefix if it exists
+            if schedule_str.strip().startswith('"schedule":'):
+                schedule_str = schedule_str.strip()[11:].strip()
+            return json.loads(schedule_str)
+        elif isinstance(schedule_str, list):
+            return schedule_str
+    except json.JSONDecodeError:
+        logging.error(f"Invalid schedule format: {schedule_str}")
+    return None
 
 # Streamlit UI
 st.set_page_config(page_title="Excel till ED318", layout="centered")
