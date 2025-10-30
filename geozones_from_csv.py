@@ -7,8 +7,8 @@ from shapely.geometry.polygon import orient
 import requests
 import logging
 
-# Konfigurera logging för att skriva ut felmeddelanden
-logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+# Update logging configuration to include DEBUG level messages
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 # Funktion för att formatera datum om det finns ett värde
@@ -88,9 +88,29 @@ def create_geojson_feature(row):
     auth = {'name': row['authority_name']}
     auth_cols = ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
 
+    def process_phone(phone_value):
+        """
+        Process the phone field to ensure it is properly formatted.
+        - Removes leading single quotes.
+        - Adds '+' if the phone starts with '46'.
+        - Removes decimals if the phone is read as a float.
+        """
+        if pd.notna(phone_value):
+            phone_value = str(phone_value).lstrip("'")  # Remove leading single quote if present
+            if phone_value.startswith('46'):  # Add '+' if the phone starts with '46'
+                phone_value = f"+{phone_value}"
+            if '.' in phone_value:  # Remove decimals if phone is read as a float
+                phone_value = phone_value.split('.')[0]
+            return phone_value
+        return None  # Return None if the phone value is NaN
+
     for col in auth_cols:
         val = row[f'authority1_{col}']
-        if not isinstance(val, list) and pd.notna(val):
+        if col == 'phone':
+            processed_phone = process_phone(val)
+            if processed_phone is not None:
+                auth[col] = processed_phone
+        elif not isinstance(val, list) and pd.notna(val):
             auth[col] = str(val)
 
     contact_name = row.get('authority1_contactName')
@@ -111,7 +131,11 @@ def create_geojson_feature(row):
 
       for col in auth2_cols:
           val = row[f'authority2_{col}']
-          if not isinstance(val, list) and pd.notna(val):
+          if col == 'phone':
+              processed_phone = process_phone(val)
+              if processed_phone is not None:
+                  auth2[col] = processed_phone
+          elif not isinstance(val, list) and pd.notna(val):
               auth2[col] = str(val)
 
       contact2_name = row.get('authority2_contactName')
@@ -325,6 +349,8 @@ if uploaded_file is not None:
             except Exception as e:
                 st.error(f"Ett oväntat fel inträffade: {e}")
                 logging.error(f"Exception: {e}")
+
+
 
 
 
