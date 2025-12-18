@@ -306,7 +306,7 @@ if uploaded_file is not None:
 
                 geojson_collection = {
                     'type': 'FeatureCollection',
-                    'title': 'Sample GeoZOnes',
+                    'title': 'UAS geographical zones Sweden',
                     'metadata': {
                         'provider': [{'lang': 'en-GB', 'text': provider}],
                         'issued': issued_datetime,
