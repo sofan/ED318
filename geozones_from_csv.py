@@ -85,6 +85,7 @@ def create_geojson_feature(row):
         "uom": row.uom.lower(),
     }
 
+    # authority 1
     auth = {'name': row['authority_name']}
     auth_cols = ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
 
@@ -305,8 +306,7 @@ if uploaded_file is not None:
                 df['geojson_feature'] = df.apply(create_geojson_feature, axis=1)
 
                 geojson_collection = {
-                    'type': 'FeatureCollection',
-                    'title': 'UAS geographical zones Sweden',
+                    'type': 'FeatureCollection',                    
                     'metadata': {
                         'provider': [{'lang': 'en-GB', 'text': provider}],
                         'issued': issued_datetime,
