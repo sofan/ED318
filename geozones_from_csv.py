@@ -87,7 +87,7 @@ def create_geojson_feature(row):
 
     # authority 1
     auth = {'name': row['authority_name']}
-    auth_cols = ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
+    auth_cols = ['purpose', 'intervalBefore'] # ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
 
     def process_phone(phone_value):
         """
@@ -110,13 +110,28 @@ def create_geojson_feature(row):
         if col == 'phone':
             processed_phone = process_phone(val)
             if processed_phone is not None:
-                auth[col] = processed_phone
+                auth[col] = [{'text': processed_phone, 'lang': 'se-SE'}] #processed_phone
         elif not isinstance(val, list) and pd.notna(val):
             auth[col] = str(val)
 
     contact_name = row.get('authority1_contactName')
     if pd.notna(contact_name):
         auth['contactName'] = [{'text': contact_name, 'lang': 'se-SE'}]
+
+    siteURL = row.get('authority1_siteURL')
+    if pd.notna(siteURL):
+        auth['siteURL'] = {'text': siteURL, 'lang': 'se-SE'}
+
+    email = row.get('authority1_email')
+    if pd.notna(email):
+        auth['email'] = {'text': email, 'lang': 'se-SE'}
+
+    phone = row.get('authority1_phone')
+    if pd.notna(phone):
+        processed_phone = process_phone(phone)
+        if processed_phone is not None:
+            auth['phone'] = {'text': processed_phone, 'lang': 'se-SE'}
+            
 
     service = row.get('authority_service')
     if pd.notna(service):
@@ -128,24 +143,39 @@ def create_geojson_feature(row):
 
     if row["authority2_name"] is not None:
       auth2 = {'name': row['authority2_name']}
-      auth2_cols = ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
+      #auth2_cols = ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
+      auth2_cols = ['purpose', 'intervalBefore']
 
       for col in auth2_cols:
           val = row[f'authority2_{col}']
           if col == 'phone':
               processed_phone = process_phone(val)
               if processed_phone is not None:
-                  auth2[col] = processed_phone
+                  auth2[col] = [{'text': processed_phone, 'lang': 'se-SE'}] #processed_phone
           elif not isinstance(val, list) and pd.notna(val):
               auth2[col] = str(val)
 
       contact2_name = row.get('authority2_contactName')
       if pd.notna(contact2_name):
-          auth2['contactName'] = [{'text': contact2_name, 'lang': 'se-SE'}]
+        auth2['contactName'] = [{'text': contact2_name, 'lang': 'se-SE'}]
 
       service2 = row.get('authority2_service')
       if pd.notna(service2):
-          auth2['service'] = [{'text': service2, 'lang': 'se-SE'}]
+        auth2['service'] = [{'text': service2, 'lang': 'se-SE'}]
+
+      siteURL2 = row.get('authority2_siteURL')
+      if pd.notna(siteURL2):
+        auth2['siteURL'] = {'text': siteURL2, 'lang': 'se-SE'}
+
+      email2 = row.get('authority2_email')
+      if pd.notna(email2):
+        auth2['email'] = {'text': email2, 'lang': 'se-SE'}
+
+      phone2 = row.get('authority2_phone')
+      if pd.notna(phone2): 
+        processed_phone2 = process_phone(phone2)
+        if processed_phone2 is not None:
+            auth2['phone'] = {'text': processed_phone2, 'lang': 'se-SE'}
 
       auth_list.append(auth2)
 
@@ -254,7 +284,7 @@ st.title('🛰️ Excel till ED318 GeoJSON')
 
 provider = st.text_input("Provider *", "Transportstyrelsen")
 issued = st.date_input("Issued *", date.today(), key="issued")
-validFrom = st.date_input("Valid From *", None, key="valid_from")
+validFrom = st.date_input("Valid From *", date.today(), key="valid_from")
 validTo = st.date_input("Valid To", None, key="valid_to")
 description = st.text_input("Description", "", key="description")
 technicalLimitation = st.text_input("Technical Limitation", "", key="limitations")
