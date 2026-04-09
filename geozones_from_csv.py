@@ -87,7 +87,7 @@ def create_geojson_feature(row):
 
     # authority 1
     auth = {'name': row['authority_name']}
-    auth_cols = ['purpose', 'intervalBefore'] # ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
+    auth_cols = ['purpose', 'intervalBefore', 'phone'] # ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
 
     def process_phone(phone_value):
         """
@@ -120,18 +120,11 @@ def create_geojson_feature(row):
 
     siteURL = row.get('authority1_siteURL')
     if pd.notna(siteURL):
-        auth['siteURL'] = {'text': siteURL, 'lang': 'se-SE'}
+        auth['siteURL'] = [{'text': siteURL, 'lang': 'se-SE'}]
 
     email = row.get('authority1_email')
     if pd.notna(email):
-        auth['email'] = {'text': email, 'lang': 'se-SE'}
-
-    phone = row.get('authority1_phone')
-    if pd.notna(phone):
-        processed_phone = process_phone(phone)
-        if processed_phone is not None:
-            auth['phone'] = {'text': processed_phone, 'lang': 'se-SE'}
-            
+        auth['email'] = [{'text': email, 'lang': 'se-SE'}]
 
     service = row.get('authority_service')
     if pd.notna(service):
@@ -144,7 +137,7 @@ def create_geojson_feature(row):
     if row["authority2_name"] is not None:
       auth2 = {'name': row['authority2_name']}
       #auth2_cols = ['purpose', 'email', 'siteURL', 'phone', 'intervalBefore']
-      auth2_cols = ['purpose', 'intervalBefore']
+      auth2_cols = ['purpose', 'intervalBefore', 'phone']
 
       for col in auth2_cols:
           val = row[f'authority2_{col}']
@@ -165,17 +158,11 @@ def create_geojson_feature(row):
 
       siteURL2 = row.get('authority2_siteURL')
       if pd.notna(siteURL2):
-        auth2['siteURL'] = {'text': siteURL2, 'lang': 'se-SE'}
+        auth2['siteURL'] = [{'text': siteURL2, 'lang': 'se-SE'}]
 
       email2 = row.get('authority2_email')
       if pd.notna(email2):
-        auth2['email'] = {'text': email2, 'lang': 'se-SE'}
-
-      phone2 = row.get('authority2_phone')
-      if pd.notna(phone2): 
-        processed_phone2 = process_phone(phone2)
-        if processed_phone2 is not None:
-            auth2['phone'] = {'text': processed_phone2, 'lang': 'se-SE'}
+        auth2['email'] = [{'text': email2, 'lang': 'se-SE'}]
 
       auth_list.append(auth2)
 
@@ -197,11 +184,12 @@ def create_geojson_feature(row):
     if pd.notna(row['originator']):
         dataSource['originator'] = row['originator']
 
+    
     feature = {
         'type': 'Feature',
         'geometry': geom,
         'properties': {
-            'identifier': row['identifier'],
+            'identifier': row['identifier'].strip(),
             'country': row['country'],
             'name': row['name'],
             'variant': row['variant'],
